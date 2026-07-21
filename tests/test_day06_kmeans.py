@@ -53,5 +53,10 @@ def test_kmeans_fit():
         assert labels[0] == labels[1]
         assert labels[2] == labels[3]
         assert labels[0] != labels[2]
+        
+        # 验证聚类中心数值收敛，排序以应对随机初始化顺序
+        sorted_centers = centers[np.argsort(centers[:, 0])]
+        expected_centers = np.array([[1.25, 1.0], [10.25, 10.0]])
+        assert np.allclose(sorted_centers, expected_centers, atol=1e-3)
     except NotImplementedError:
         pytest.skip("kmeans_fit loop is not implemented yet.")

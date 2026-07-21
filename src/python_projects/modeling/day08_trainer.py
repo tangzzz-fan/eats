@@ -35,19 +35,9 @@ def parse_args_and_merge_config(config: Dict[str, Any]) -> Tuple[argparse.Namesp
     :param config: 原始配置字典
     :return: 元组 (args, merged_config)
     """
-    parser = argparse.ArgumentParser(description="Embodied AI Trajectory Tracker Training script")
-    parser.add_argument("--lr", type=float, default=None, help="Override learning rate")
-    parser.add_argument("--epochs", type=int, default=None, help="Override epochs")
-    
-    args = parser.parse_args([]) # 在单元测试或脚本中默认为空
-    
-    # 覆盖逻辑
-    if args.lr is not None:
-        config["training"]["learning_rate"] = args.lr
-    if args.epochs is not None:
-        config["training"]["epochs"] = args.epochs
-        
-    return args, config
+    # TODO: 编写命令行参数解析与配置字典合并覆盖的逻辑
+    # 提示：可以使用 argparse.ArgumentParser，在单元测试中若要解析自定义 argv 可以通过 sys.argv 获取
+    raise NotImplementedError("Please implement parse_args_and_merge_config")
 
 
 class Trainer:
@@ -123,3 +113,12 @@ class Trainer:
             train_loss = self.train_epoch(train_loader)
             val_loss = self.val_epoch(val_loader)
             print(f"Epoch {epoch:02d} | Train Loss: {train_loss:.5f} | Val Loss: {val_loss:.5f}")
+
+if __name__ == "__main__":
+    # 快速验证配置解析与训练器合并
+    config_path = "config/config.yaml"
+    try:
+        raw_config = load_yaml_config(config_path)
+        print("Loaded Raw learning rate:", raw_config["training"]["learning_rate"])
+    except NotImplementedError as e:
+        print("Trainer methods not fully implemented yet:", e)

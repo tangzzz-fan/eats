@@ -1,4 +1,4 @@
-import numpy as np  # type: ignore
+import numpy as np
 
 def compute_distances(points: np.ndarray, centers: np.ndarray) -> np.ndarray:
     """
@@ -101,3 +101,13 @@ def kmeans_fit(points: np.ndarray, k: int, max_iters: int = 100, tol: float = 1e
     # TODO: 实现 K-means 迭代收敛循环
     # 提示：在循环中调用 compute_distances, assign_clusters, update_centers，并检查是否收敛。
     raise NotImplementedError("Please implement kmeans_fit loop")
+
+if __name__ == "__main__":
+    # 快速验证 K-means 聚类
+    data = np.array([[1.0, 1.0], [1.5, 1.0], [10.0, 10.0], [10.5, 10.0]])
+    try:
+        centers, labels = kmeans_fit(data, k=2)
+        print("Converged centers:\n", centers)
+        print("Labels:", labels)
+    except NotImplementedError as e:
+        print("K-means is not fully implemented yet:", e)

@@ -1,21 +1,35 @@
 [project]
 name = "python-projects"
 version = "0.1.0"
-description = "Add your description here"
+description = "EATS Embodied AI Trajectory Tracker Simulator Practice Repository"
 readme = "README.md"
 authors = [
     { name = "Tango", email = "csqingyang@foxmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "matplotlib>=3.11.1",
-    "mypy>=2.3.0",
-    "pandas>=3.0.3",
-    "pytest>=9.1.1",
-    "pyyaml>=6.0.3",
-    "torch>=2.13.0",
+    "matplotlib>=3.10.0,<4.0.0",
+    "mypy>=1.14.0,<2.0.0",
+    "pandas>=2.2.0,<4.0.0",
+    "pytest>=8.0.0,<10.0.0",
+    "pyyaml>=6.0.0,<7.0.0",
+    "torch>=2.0.0,<3.0.0",
 ]
 
 [build-system]
 requires = ["uv_build>=0.11.2,<0.12.0"]
 build-backend = "uv_build"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]

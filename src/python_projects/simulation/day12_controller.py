@@ -33,6 +33,8 @@ class PIDController:
             raise ValueError("dt must be positive.")
             
         # TODO: 编写 PID 控制器计算式
+        # 提示：计算当前误差 error，更新 self.integral，计算微分项，保存 self.prev_error 并输出 P+I+D。
+        # 进阶优化：可以在积分更新累加时，对 self.integral 加上限制截断（例如限制在某个最大值范围如 [-10.0, 10.0] 内），以防止积分饱和（Anti-windup）。
         raise NotImplementedError("Please implement PIDController.update")
 
     def reset(self) -> None:

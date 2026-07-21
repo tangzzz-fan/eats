@@ -31,3 +31,32 @@ def test_bank_account_withdraw():
         assert account.balance == 70.0
     except NotImplementedError:
         pytest.skip("BankAccount.withdraw is not implemented yet.")
+
+def test_bank_account_initial_balance_negative():
+    with pytest.raises(ValueError):
+        BankAccount(owner="Alice", initial_balance=-10.0)
+
+def test_bank_account_negative_deposit():
+    account = BankAccount(owner="Alice", initial_balance=100.0)
+    try:
+        with pytest.raises(ValueError):
+            account.deposit(-50.0)
+    except NotImplementedError:
+        pytest.skip("BankAccount.deposit is not implemented yet.")
+
+def test_bank_account_negative_withdraw():
+    account = BankAccount(owner="Alice", initial_balance=100.0)
+    try:
+        with pytest.raises(ValueError):
+            account.withdraw(-50.0)
+    except NotImplementedError:
+        pytest.skip("BankAccount.withdraw is not implemented yet.")
+
+def test_bank_account_overdraft():
+    account = BankAccount(owner="Alice", initial_balance=100.0)
+    try:
+        with pytest.raises(ValueError):
+            account.withdraw(150.0)
+    except NotImplementedError:
+        pytest.skip("BankAccount.withdraw is not implemented yet.")
+

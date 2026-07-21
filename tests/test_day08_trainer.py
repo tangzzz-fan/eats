@@ -18,7 +18,7 @@ def test_config_loader():
     except NotImplementedError:
         pytest.skip("load_yaml_config is not implemented yet.")
 
-def test_parse_args_and_merge_config():
+def test_parse_args_and_merge_config(monkeypatch):
     config = {
         "training": {
             "learning_rate": 0.005,
@@ -26,9 +26,14 @@ def test_parse_args_and_merge_config():
         }
     }
     # 模拟输入参数覆盖
-    args, merged = parse_args_and_merge_config(config)
-    assert merged["training"]["learning_rate"] == 0.005
-    assert merged["training"]["epochs"] == 20
+    import sys
+    monkeypatch.setattr(sys, "argv", ["trainer.py", "--lr", "0.02", "--epochs", "50"])
+    try:
+        args, merged = parse_args_and_merge_config(config)
+        assert merged["training"]["learning_rate"] == 0.02
+        assert merged["training"]["epochs"] == 50
+    except NotImplementedError:
+        pytest.skip("parse_args_and_merge_config is not implemented yet.")
 
 def test_trainer_loops():
     class DummyModel(nn.Module):

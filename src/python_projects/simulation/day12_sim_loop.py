@@ -1,5 +1,5 @@
 import math
-import numpy as np  # type: ignore
+import numpy as np
 from typing import List, Tuple, Dict
 from python_projects.simulation.day12_kinematics import Robot2D
 from python_projects.simulation.day12_controller import PIDController
@@ -67,3 +67,12 @@ def run_simulation_loop(path: np.ndarray,
     # 4. 调用 steering_pid.update 计算得到角速度 omega
     # 5. 调用 robot.update 更新小车状态，并写入历史字典
     raise NotImplementedError("Please implement run_simulation_loop")
+
+if __name__ == "__main__":
+    # 快速验证闭环控制循环
+    path = generate_circular_path(radius=5.0, num_points=20)
+    try:
+        history = run_simulation_loop(path, kp=1.0, ki=0.1, kd=0.01, total_time=1.0, dt=0.2)
+        print("Simulation tracking errors:\n", history["tracking_error"])
+    except NotImplementedError as e:
+        print("Simulation loop not fully implemented yet:", e)

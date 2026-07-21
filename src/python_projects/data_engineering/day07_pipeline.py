@@ -1,5 +1,5 @@
 import os
-import pandas as pd  # type: ignore
+import pandas as pd
 from typing import Tuple
 
 def load_sensor_data(csv_path: str) -> pd.DataFrame:
@@ -82,3 +82,13 @@ def time_series_train_test_split(df: pd.DataFrame, test_ratio: float = 0.2) -> T
     """
     # TODO: 按时间位置切分并返回训练集和测试集
     raise NotImplementedError("Please implement time_series_train_test_split")
+
+if __name__ == "__main__":
+    # 快速验证时序特征提取管道
+    csv_path = "data/raw_odometry.csv"
+    if os.path.exists(csv_path):
+        try:
+            df = load_sensor_data(csv_path)
+            print("Loaded data index sample:\n", df.head(3))
+        except NotImplementedError as e:
+            print("Pipeline methods not fully implemented yet:", e)

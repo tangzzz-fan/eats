@@ -100,3 +100,13 @@ def generate_sequence(model: nn.Module,
     """
     # TODO: 编写自回归推理生成主循环
     raise NotImplementedError("Please implement generate_sequence")
+
+if __name__ == "__main__":
+    # 快速验证自回归生成网络结构
+    model = LanguageModel(vocab_size=10, d_model=8, nhead=2)
+    x = torch.randint(0, 10, (1, 3))
+    try:
+        logits = model(x)
+        print("Generator output logits shape:", logits.shape)
+    except NotImplementedError as e:
+        print("Generator model not fully implemented yet:", e)

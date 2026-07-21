@@ -112,7 +112,7 @@ def train_with_early_stopping(model: nn.Module,
             x_batch, y_batch = x_batch.to(device), y_batch.to(device)
             # TODO: 补全网络前向传播、梯度反传及参数更新三步走
             # 提示：optimizer.zero_grad() -> model(x_batch) -> criterion() -> loss.backward() -> optimizer.step()
-            pass
+            raise NotImplementedError("Please implement the training loop in train_with_early_stopping")
             
         # 验证评估
         model.eval()
@@ -146,3 +146,13 @@ def train_with_early_stopping(model: nn.Module,
     #     model.load_state_dict(torch.load(checkpoint_path))
         
     return model, best_loss
+
+if __name__ == "__main__":
+    # 快速验证 MLP 网络形状
+    model = SteeringMLP(input_dim=5, hidden_dim=16, output_dim=2)
+    x = torch.randn(4, 5)
+    try:
+        y = model(x)
+        print("MLP Output shape:", y.shape)
+    except NotImplementedError as e:
+        print("MLP forward not fully implemented yet:", e)

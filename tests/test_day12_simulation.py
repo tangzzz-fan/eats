@@ -35,6 +35,22 @@ def test_pid_controller():
     except NotImplementedError:
         pytest.skip("PIDController update is not implemented yet.")
 
+def test_pid_controller_convergence():
+    pid = PIDController(kp=2.0, ki=0.5, kd=0.1)
+    try:
+        feedback = 0.0
+        setpoint = 10.0
+        errors = []
+        for _ in range(10):
+            out = pid.update(setpoint=setpoint, feedback=feedback, dt=0.1)
+            feedback += out * 0.1  # 模拟小车在角速度输出下的航向积分
+            errors.append(abs(setpoint - feedback))
+        # 确保随着迭代，控制偏差整体呈收敛趋势
+        assert errors[-1] < errors[0]
+        assert errors[-1] < 5.0
+    except NotImplementedError:
+        pytest.skip("PIDController update is not implemented yet.")
+
 def test_simulation_loop():
     path = generate_circular_path(radius=5.0, num_points=20)
     try:

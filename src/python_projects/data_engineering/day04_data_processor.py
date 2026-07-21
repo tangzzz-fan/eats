@@ -1,6 +1,8 @@
 import os
-import pandas as pd  # type: ignore
-import matplotlib.pyplot as plt  # type: ignore
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 def process_and_plot_data(csv_path: str, output_image_path: str = "output_chart.png") -> None:
     """

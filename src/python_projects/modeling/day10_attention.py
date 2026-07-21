@@ -60,8 +60,8 @@ class MultiHeadAttention(nn.Module):
         :return: 注意力加权输出，形状为 (batch_size, seq_len_q, d_model)
         """
         # TODO: 编写多头注意力机制前向流程的形状变换与计算
-        # 1. 经过投影层 q = self.q_proj(q)
-        # 2. 变换形状为 (batch_size, num_heads, seq_len, head_dim)
+        # 1. 经过投影层，如 q = self.q_proj(q)
+        # 2. 变换形状：先使用 .view() 重塑为 (batch_size, seq_len, num_heads, head_dim)，再使用 .transpose(1, 2) 轴交换变为 (batch_size, num_heads, seq_len, head_dim) 以便对齐空间关系，对 k, v 进行类似处理。
         # 3. 矩阵相乘计算相关系数得分 scores
         # 4. 计算 Softmax 得到注意力权重 weights
         # 5. 加权 V 矩阵，再合并所有头（transpose -> reshape）
@@ -88,3 +88,13 @@ class FeedForwardNetwork(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # TODO: 依次通过两层映射和激活层完成计算并返回
         raise NotImplementedError("Please implement FeedForwardNetwork.forward")
+
+if __name__ == "__main__":
+    # 快速验证多头注意力层维度
+    attn = MultiHeadAttention(d_model=8, num_heads=2)
+    x = torch.randn(2, 3, 8)
+    try:
+        out = attn(x, x, x)
+        print("Attention Output shape:", out.shape)
+    except NotImplementedError as e:
+        print("Attention layer not fully implemented yet:", e)
