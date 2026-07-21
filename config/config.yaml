@@ -1,0 +1,21 @@
+# Configuration parameters for model training and robot simulation
+# All parameters are configured in standard formats, no emojis.
+
+training:
+  learning_rate: 0.005
+  batch_size: 16
+  epochs: 20
+  patience: 3
+
+model:
+  input_dim: 4     # rolling_mean, rolling_std, lag_1, lag_2
+  hidden_dim: 16
+  output_dim: 1    # Predicted steering command
+
+control:
+  kp: 1.5
+  ki: 0.1
+  kd: 0.05
+  target_speed: 1.0
+  sim_dt: 0.1
+  total_time: 10.0
