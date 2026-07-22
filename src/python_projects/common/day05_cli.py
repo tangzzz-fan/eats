@@ -28,31 +28,32 @@ def main() -> None:
     - 空命令崩溃：设计子命令时若没有加上 `required=True`，在执行裸脚本时不会触发命令验证报错，而会继续往下执行导致读取不存在的变量引发 AttributeError。
     """
     # TODO: 1. 创建 ArgumentParser 对象
-    # parser = argparse.ArgumentParser(description="Python Practice Project CLI")
+    parser = argparse.ArgumentParser(description="Python Practice Project CLI")
 
     # TODO: 2. 添加全局的 --version / -v 参数
-    # parser.add_argument('-v', '--version', action='version', version='python-projects 1.0.0')
+    parser.add_argument('-v', '--version', action='version', version='python-practice 1.0.0')
 
     # TODO: 3. 创建子命令解析器
-    # subparsers = parser.add_subparsers(dest='subcommand', required=True, help='Available commands')
+    subparsers = parser.add_subparsers(dest='subcommand', required=True, help='Available commands')
 
     # TODO: 4. 添加 'analyze' 子命令
-    # analyze_parser = subparsers.add_parser('analyze', help='Analyze and archive log files')
-    # analyze_parser.add_argument('--dir', type=str, default='.', help='Directory containing log files (default: .)')
+    analyze_parser = subparsers.add_parser('analyze', help='Analyze and archive log files')
+    analyze_parser.add_argument('--dir', type=str, default='.', help='Directory containing log files (default: .)')
 
     # TODO: 5. 解析参数
-    # args = parser.parse_args()
+    args = parser.parse_args()
+    print(args)
 
     # TODO: 6. 根据解析出来的子命令，分发执行逻辑
-    # if args.subcommand == 'analyze':
-    #     print(f"Starting log analysis in directory: {args.dir}")
-    #     # 调用 day02 的分析函数并打印结果
-    #     results = analyze_and_archive_logs(args.dir)
-    #     print("Analysis results:", results)
-    
-    # 临时实现以保证没有报错：
-    print("Please implement CLI parser logic in main().")
-    sys.exit(0)
+    if args.subcommand == 'analyze':
+        print(f"Starting log analysis in directory: {args.dir}")
+        # 调用 day02 的分析函数并打印结果
+        results = analyze_and_archive_logs(args.dir)
+        print("Analysis results:", results)
 
 if __name__ == "__main__":
     main()
+    # 运行脚本：python3 src/python_projects/common/day05_cli.py analyze --dir /path/to/logs
+    # 运行脚本：python3 src/python_projects/common/day05_cli.py --version
+    # 运行脚本：python3 src/python_projects/common/day05_cli.py --help
+    # 运行脚本后, log 文件会被移动到 archive 文件夹
