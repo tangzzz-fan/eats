@@ -61,6 +61,7 @@ def analyze_and_archive_logs(target_dir: str = ".") -> dict[str, int]:
     # TODO: 请完成以下步骤的实现
     
     # 步骤 A: 确保归档目录存在，如果不存在则使用 os.makedirs 创建它
+    os.makedirs(archive_dir_path, exist_ok=True)
     
     # 步骤 B: 循环遍历每一个 log_files
     for filename in log_files:
@@ -70,15 +71,19 @@ def analyze_and_archive_logs(target_dir: str = ".") -> dict[str, int]:
         # 步骤 B-1: 安全地打开文件并逐行读取，统计包含 "ERROR" 的行数
         # 提示：使用 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         #       for line in f: ...
-        
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                if "ERROR" in line:
+                    error_count += 1
         
         # 步骤 B-2: 将统计结果存入 error_counts 字典，键为文件名，值为错误行数
-        
+        error_counts[filename] = error_count
         
         # 步骤 B-3: 将处理完的日志文件移动到归档文件夹中
         # 提示：计算目标路径 dest_path = os.path.join(archive_dir_path, filename)
         #       使用 shutil.move(file_path, dest_path)
-        pass
+        dest_path = os.path.join(archive_dir_path, filename)
+        shutil.move(file_path, dest_path)
 
     return error_counts
 
