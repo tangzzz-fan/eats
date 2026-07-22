@@ -40,7 +40,8 @@ def process_and_plot_data(csv_path: str, output_image_path: str = "output_chart.
     try:
         # TODO: 1. 使用 pd.read_csv 读取 CSV 文件
         # df = ...
-        raise NotImplementedError("Please implement process_and_plot_data")
+        # raise NotImplementedError("Please implement process_and_plot_data")
+        df = pd.read_csv(csv_path)
     except FileNotFoundError:
         print(f"Error: The file at '{csv_path}' was not found. Please verify the path.")
         # 直接返回，不继续往下执行
@@ -54,8 +55,15 @@ def process_and_plot_data(csv_path: str, output_image_path: str = "output_chart.
     # 步骤 B: 缺失值处理
     # 假设 CSV 包含 'Date' 和 'Value' 两列。我们来看看 'Value' 是否包含 NaN
     # TODO: 2. 检查是否有缺失值，并进行填充（推荐使用 ffill() 或 fillna(0)）
-    # df['Value'] = ...
+    df['Value'] = df['Value'].ffill()
+
+    # 假设 'Date' 列是日期格式，'Value' 列是数值格式
+    # 检查缺失值
+    print("Missing values in 'Value' column:")
+    print(df.isna().sum())
     
+    # 转换日期列
+    df['Date'] = pd.to_datetime(df['Date'])
     
     # 步骤 C: 数据可视化
     # 我们使用 matplotlib 来画一条折线图
@@ -67,11 +75,23 @@ def process_and_plot_data(csv_path: str, output_image_path: str = "output_chart.
     # TODO: 8. 自动调整布局 plt.tight_layout()
     # TODO: 9. 保存到 output_image_path (plt.savefig)
     # TODO: 10. 释放内存资源 (plt.close())
+    plt.figure()
+    
+    plt.plot(df['Date'], df['Value'], marker='o', color='b', label='Value trend')
+    plt.title('Value Trend')
+    plt.xlabel('Date')
+    plt.ylabel('Value')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_image_path)
+    plt.close()
     
     # 以下为提示，实际代码由你完成：
     print(f"Chart successfully saved to {output_image_path}")
 
 if __name__ == "__main__":
-    # 本地跑一下测试，默认应该提示文件不存在
+    # 本地跑一下测试，默认应该提示文件不存在    
     print("Testing data processor...")
-    process_and_plot_data("non_existent_file.csv")
+    # process_and_plot_data("non_existent_file.csv")
+    process_and_plot_data("data/sample.csv")
