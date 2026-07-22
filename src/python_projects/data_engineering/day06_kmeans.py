@@ -31,7 +31,10 @@ def compute_distances(points: np.ndarray, centers: np.ndarray) -> np.ndarray:
     :return: 距离矩阵，形状为 (N, K)
     """
     # TODO: 使用广播机制一步完成距离矩阵计算，不要使用 for 循环
-    raise NotImplementedError("Please implement compute_distances using numpy broadcasting")
+    # raise NotImplementedError("Please implement compute_distances using numpy broadcasting")
+    # 计算距离矩阵
+    distances = np.linalg.norm(points[:, np.newaxis, :] - centers[np.newaxis, :, :], axis=2)
+    return distances
 
 
 def assign_clusters(distances: np.ndarray) -> np.ndarray:
@@ -47,7 +50,10 @@ def assign_clusters(distances: np.ndarray) -> np.ndarray:
     :return: 聚类标签，形状为 (N,)，类型为整数
     """
     # TODO: 找出每一行最小值的索引并返回
-    raise NotImplementedError("Please implement assign_clusters")
+    # raise NotImplementedError("Please implement assign_clusters")
+    # 找出每一行最小值的索引
+    labels = np.argmin(distances, axis=1)
+    return labels
 
 
 def update_centers(points: np.ndarray, labels: np.ndarray, k: int) -> np.ndarray:
@@ -65,7 +71,13 @@ def update_centers(points: np.ndarray, labels: np.ndarray, k: int) -> np.ndarray
     :return: 更新后的中心点集，形状为 (K, D)
     """
     # TODO: 计算每个聚类中所有点的均值作为新的中心点
-    raise NotImplementedError("Please implement update_centers")
+    # raise NotImplementedError("Please implement update_centers")
+    # 计算每个聚类中所有点的均值作为新的中心点
+    centers = np.zeros((k, points.shape[1]))
+    for i in range(k):
+        if (labels == i).any():
+            centers[i] = points[labels == i].mean(axis=0)
+    return centers
 
 
 def kmeans_fit(points: np.ndarray, k: int, max_iters: int = 100, tol: float = 1e-4) -> tuple[np.ndarray, np.ndarray]:
@@ -100,7 +112,21 @@ def kmeans_fit(points: np.ndarray, k: int, max_iters: int = 100, tol: float = 1e
     
     # TODO: 实现 K-means 迭代收敛循环
     # 提示：在循环中调用 compute_distances, assign_clusters, update_centers，并检查是否收敛。
-    raise NotImplementedError("Please implement kmeans_fit loop")
+    # raise NotImplementedError("Please implement kmeans_fit loop")
+    # 2. 迭代直至收敛或达到最大迭代次数
+    for i in range(max_iters):
+        # a. 计算距离矩阵 compute_distances
+        distances = compute_distances(points, centers)
+        # b. 划分聚类标签 assign_clusters
+        labels = assign_clusters(distances)
+        # c. 保存旧的中心点，计算新中心点 update_centers
+        old_centers = centers.copy()
+        centers = update_centers(points, labels, k)
+        # d. 判断中心点漂移距离是否小于阈值 tol（如果旧中心和新中心的绝对误差均值小于 tol，则提前终止迭代）
+        if np.allclose(old_centers, centers, atol=tol):
+            break
+    return centers, labels
+
 
 if __name__ == "__main__":
     # 快速验证 K-means 聚类
