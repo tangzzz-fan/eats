@@ -42,7 +42,7 @@ class BankAccount:
         但因为没有定义 @balance.setter，外部直接赋值（如 account.balance = 100）会抛出 AttributeError。
         """
         # TODO: 请在此处返回私有余额变量的值
-        raise NotImplementedError("Please implement the balance property")
+        return self._balance
 
     def deposit(self, amount: float) -> float:
         """
@@ -54,7 +54,10 @@ class BankAccount:
         # TODO: 1. 检查 amount 是否大于 0，若不大于 0 则抛出 ValueError 异常。
         # TODO: 2. 将金额累加到私有余额中。
         # TODO: 3. 返回更新后的余额。
-        raise NotImplementedError("Please implement deposit method")
+        if amount <= 0:
+            raise ValueError("Deposit amount must be greater than 0.")
+        self._balance += amount
+        return self._balance
 
     def withdraw(self, amount: float) -> float:
         """
@@ -67,7 +70,12 @@ class BankAccount:
         # TODO: 2. 检查余额是否足够取款（即 self.balance >= amount），若不足则抛出 ValueError 异常。
         # TODO: 3. 从私有余额中扣除相应金额。
         # TODO: 4. 返回更新后的余额。
-        raise NotImplementedError("Please implement withdraw method")
+        if amount <= 0:
+            raise ValueError("Withdraw amount must be greater than 0.")
+        if self.balance < amount:
+            raise ValueError("Insufficient balance.")
+        self._balance -= amount
+        return self._balance
 
     def apply_interest(self, rate: float) -> float:
         """
@@ -79,7 +87,10 @@ class BankAccount:
         # TODO: 1. 检查利率 rate 是否为正数，若小于 0 则抛出 ValueError。
         # TODO: 2. 计算利息（利息 = 余额 * 利率）并将利息加到余额中。
         # TODO: 3. 返回更新后的余额。
-        raise NotImplementedError("Please implement apply_interest method")
+        if rate < 0:
+            raise ValueError("Interest rate cannot be negative.")
+        self._balance += self._balance * rate
+        return self._balance
 
     def __repr__(self) -> str:
         """
@@ -87,4 +98,4 @@ class BankAccount:
         期望格式：BankAccount(owner='姓名', balance=当前余额)
         """
         # TODO: 请在此处返回格式化后的字符串
-        raise NotImplementedError("Please implement __repr__ method")
+        return f"BankAccount(owner={self.owner!r}, balance={self.balance})"
