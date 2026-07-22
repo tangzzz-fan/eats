@@ -28,7 +28,8 @@ def retry(max_attempts: int = 3, delay: float = 1.0) -> Callable:
     
     工程实践避坑指南：
     - 丢失包装原信息：不用 `@functools.wraps` 会使得被装饰的函数重命名为内层 `wrapper`，导致测试框架识别失败及反射诊断信息丢失。
-    - 延迟阻滞线程：重试逻辑中使用同步 `time.sleep(delay)` 会阻塞当前运行线程。在异步网络框架中（如 FastAPI 异步端点），若非必须，应改用 `await asyncio.sleep(delay)`。
+    - 延迟阻滞线程：重试逻辑中使用同步 `time.sleep(delay)` 会阻塞当前运行线程。
+    - 在异步网络框架中（如 FastAPI 异步端点），若非必须，应改用 `await asyncio.sleep(delay)`。
     
     :param max_attempts: 最大尝试次数，默认为 3。
     :param delay: 每次重试之间的等待秒数，默认为 1.0 秒。
@@ -42,7 +43,15 @@ def retry(max_attempts: int = 3, delay: float = 1.0) -> Callable:
             # 3. 执行成功则直接返回结果
             # 4. 执行失败则捕获异常，打印重试提示，并 time.sleep(delay)
             # 5. 如果是最后一次尝试依然失败，则 raise 该异常
-            raise NotImplementedError("Please implement the retry decorator logic")
+            # raise NotImplementedError("Please implement the retry decorator logic")
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    print(f"Attempt {attempt+1}/{max_attempts} failed: {e}")
+                    time.sleep(delay)
+            raise e
+            
         return wrapper
     return decorator
 
@@ -71,7 +80,11 @@ def fibonacci_generator():
     # 2. 使用 while True 循环
     # 3. 每次 yield 当前的 a
     # 4. 更新 a, b 的值为下一个数（a, b = b, a + b）
-    raise NotImplementedError("Please implement fibonacci_generator")
+    # raise NotImplementedError("Please implement fibonacci_generator")
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
 
 
 if __name__ == "__main__":
