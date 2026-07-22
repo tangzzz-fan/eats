@@ -260,6 +260,387 @@ with torch.no_grad():                          # 考场纪律：不记账
 
 ---
 
+## PyTorch 最佳实践清单
+
+下面是从项目实战中总结的 12 条铁律——每个踩过坑的人都会告诉你的话。
+
+### 设备管理
+
+```python
+# ✅ 好：统一管理设备，代码到处可用
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = MyModel().to(device)
+
+# ❌ 坏：硬编码 'cuda'，换台没有 GPU 的电脑直接报错
+model = MyModel().cuda()
+
+# ✅ 好：数据也记得搬到同一设备
+x, y = x.to(device), y.to(device)
+
+# ❌ 易错：张量在 CPU、模型在 GPU，报错 "Expected all tensors to be on the same device"
+```
+
+### 训练循环模板
+
+```python
+def train_one_epoch(model, loader, optimizer, loss_fn, device):
+    model.train()  # ✅ 训练前切训练模式
+    total_loss = 0.0
+    for x, y in loader:
+        x, y = x.to(device), y.to(device)
+
+        optimizer.zero_grad()       # 第 3 步：清空
+        pred = model(x)             # 第 1 步：投篮
+        loss = loss_fn(pred, y)     # 第 2 步：打分
+        loss.backward()             # 第 4 步：复盘
+        optimizer.step()            # 第 5 步：调整
+
+        total_loss += loss.item()   # ✅ .item() 把单元素张量变成 Python float
+    return total_loss / len(loader)
+
+@torch.no_grad()  # ✅ 装饰器写法更简洁，整个函数不记账
+def evaluate(model, loader, loss_fn, device):
+    model.eval()
+    total_loss = 0.0
+    for x, y in loader:
+        x, y = x.to(device), y.to(device)
+        pred = model(x)
+        loss = loss_fn(pred, y)
+        total_loss += loss.item()
+    return total_loss / len(loader)
+```
+
+### 常见错误信息速查
+
+| 报错信息 | 原因 | 解法 |
+|---------|------|------|
+| `RuntimeError: Expected all tensors to be on the same device` | 张量在 CPU、模型在 GPU（或反了） | 把张量 `.to(device)`，和模型同一设备 |
+| `RuntimeError: Trying to backward through the graph a second time` | 对一个 loss 调了两次 `backward()` | 要么 `retain_graph=True`（不推荐新手用），要么重新前向传播 |
+| `UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow` | 从 numpy 列表直接造 tensor | 先 `np.stack()` 转成一个大数组，再 `torch.from_numpy()` |
+| `ValueError: Expected more than 1 value per channel when training` | BatchNorm 收到 batch_size=1 的输入 | 设 `DataLoader(drop_last=True)` 丢弃最后不完整的 batch |
+| `RuntimeError: CUDA out of memory` | 显存不够 | 减小 batch_size、减小模型、用 `torch.cuda.empty_cache()` |
+| 损失变成 `nan` | 学习率太大导致参数爆炸 | 调小 lr（先除 10），加梯度裁剪 `torch.nn.utils.clip_grad_norm_` |
+| 损失一直不降 | 学习率太小或模型太简单 | 调大 lr、加层数、检查数据是否 normalize 过 |
+
+### 调参速查表
+
+```
+问题现象                          →  尝试方案
+──────────────────────────────────────────────────
+训练损失不降                       →  增大 lr、检查数据归一化、检查标签是否正确
+验证损失远高于训练损失（过拟合）     →  加 Dropout、减小模型、加数据增强、早停
+训练损失震荡剧烈                   →  减小 lr、增大 batch_size
+损失下降但验证损失不再改善           →  早停（early stopping）、降低 lr
+损失降到一定值后不再动               →  减小 lr、检查梯度是否消失
+第一个 batch 就 nan                →  减小 lr（先除 100）、检查输入数据有没有 nan
+```
+
+---
+
+## 实战练习：从看懂到会做
+
+### 练习一：自己写五部曲（15 分钟）
+
+**任务**：用 PyTorch 训练一个模型学 `y = 3x² - 2x + 1` 这个二次函数。
+
+与文章里 `y = 2x + 1` 不同：这次是**非线性**的，所以一层 `nn.Linear(1, 1)` 不够（它只能学直线）。你需要搭一个至少**两层的网络**，中间加 ReLU 激活函数来引入非线性。
+
+**脚手架**：
+
+```python
+import torch
+import torch.nn as nn
+
+# 造数据：y = 3x² - 2x + 1，加一点噪声模拟真实场景
+torch.manual_seed(42)
+x = torch.linspace(-2, 2, 200).reshape(-1, 1)  # 200 个点，从 -2 到 2
+y_true = 3 * x**2 - 2 * x + 1
+y = y_true + torch.randn_like(x) * 0.3          # 加点噪声
+
+# TODO: 搭一个两层网络
+# 第一层：1 → 16（输入 1 个 x，扩展到 16 个隐藏神经元）
+# 激活：ReLU（nn.ReLU()）
+# 第二层：16 → 1（16 个隐藏神经元汇合到 1 个输出）
+model = nn.Sequential(
+    # 填你的代码
+)
+
+loss_fn = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+
+# TODO: 写训练循环（500 轮）
+for epoch in range(500):
+    # 五部曲
+    pass
+
+# 测试：看看模型学会了吗
+model.eval()
+with torch.no_grad():
+    test_x = torch.tensor([[-1.0], [0.0], [1.0], [2.0]])
+    pred = model(test_x)
+    true = 3 * test_x**2 - 2 * test_x + 1
+    for i in range(len(test_x)):
+        print(f"x={test_x[i].item():.0f}, 预测={pred[i].item():.3f}, 真实={true[i].item():.3f}")
+```
+
+<details>
+<summary>点击查看答案</summary>
+
+```python
+import torch
+import torch.nn as nn
+
+torch.manual_seed(42)
+x = torch.linspace(-2, 2, 200).reshape(-1, 1)
+y_true = 3 * x**2 - 2 * x + 1
+y = y_true + torch.randn_like(x) * 0.3
+
+# 两层网络：线性1 → ReLU → 线性2
+model = nn.Sequential(
+    nn.Linear(1, 16),   # 1 个输入 → 16 个隐藏神经元
+    nn.ReLU(),          # 非线性激活（没有它就只能学直线！）
+    nn.Linear(16, 1),   # 16 个隐藏 → 1 个输出
+)
+
+loss_fn = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+
+for epoch in range(500):
+    pred = model(x)                 # 1. 前向
+    loss = loss_fn(pred, y)         # 2. 损失
+    optimizer.zero_grad()           # 3. 清零
+    loss.backward()                 # 4. 反向
+    optimizer.step()                # 5. 更新
+
+model.eval()
+with torch.no_grad():
+    test_x = torch.tensor([[-1.0], [0.0], [1.0], [2.0]])
+    pred = model(test_x)
+    true = 3 * test_x**2 - 2 * test_x + 1
+    for i in range(len(test_x)):
+        print(f"x={test_x[i].item():.0f}, 预测={pred[i].item():.3f}, 真实={true[i].item():.3f}")
+    # 预期输出大致接近: 6, 1, 2, 9（真实值为 6, 1, 2, 9）
+```
+</details>
+
+---
+
+### 练习二：MNIST 手写数字识别（30 分钟）
+
+**任务**：这是深度学习的 "Hello World"——训练一个网络识别 0-9 的手写数字。PyTorch 自带这个数据集，不需要额外下载。
+
+你要写：Dataset 准备 → 模型搭建 → 训练循环 → 评估准确率。
+
+**脚手架**：
+
+```python
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+
+# 准备数据：把 28×28 的图片拉平成 784 个数，归一化到 [0, 1]
+transform = transforms.Compose([
+    transforms.ToTensor(),                     # PIL 图片 → Tensor，值在 [0, 1]
+    transforms.Lambda(lambda x: x.view(-1)),   # 拉平成 784 维向量
+])
+
+train_data = datasets.MNIST(root="./mnist_data", train=True,
+                            download=True, transform=transform)
+test_data = datasets.MNIST(root="./mnist_data", train=False,
+                           download=True, transform=transform)
+
+train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
+
+# TODO: 搭模型——784 输入 → 128 隐藏 → 64 隐藏 → 10 输出（每个数字一个分数）
+model = nn.Sequential(
+    # 填你的代码
+    # 提示：最后一层不需要激活函数，因为 CrossEntropyLoss 内部会做 Softmax
+)
+
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+# TODO: 训练 3 个 epoch
+# 每个 epoch = 所有训练数据过一遍
+# 每 100 个 batch 打印一次损失
+
+# TODO: 评估——在整个测试集上算准确率
+# 提示：pred.argmax(dim=1) 取分数最高的那个类别
+```
+
+<details>
+<summary>点击查看答案</summary>
+
+```python
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+
+# 准备数据
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(lambda x: x.view(-1)),
+])
+
+train_data = datasets.MNIST(root="./mnist_data", train=True,
+                            download=True, transform=transform)
+test_data = datasets.MNIST(root="./mnist_data", train=False,
+                           download=True, transform=transform)
+
+train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
+
+# 搭模型
+model = nn.Sequential(
+    nn.Linear(784, 128),
+    nn.ReLU(),
+    nn.Dropout(0.2),        # 随机关掉 20% 神经元，防过拟合
+    nn.Linear(128, 64),
+    nn.ReLU(),
+    nn.Linear(64, 10),      # 10 个输出 = 10 个数字类别
+)
+
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+# 训练
+for epoch in range(3):
+    model.train()
+    running_loss = 0.0
+    for batch_idx, (x, y) in enumerate(train_loader):
+        x, y = x.to(device), y.to(device)
+
+        pred = model(x)
+        loss = loss_fn(pred, y)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+        if batch_idx % 100 == 99:
+            avg_loss = running_loss / 100
+            print(f"Epoch {epoch+1}, Batch {batch_idx+1}: loss = {avg_loss:.4f}")
+            running_loss = 0.0
+
+# 评估准确率
+model.eval()
+correct, total = 0, 0
+with torch.no_grad():
+    for x, y in test_loader:
+        x, y = x.to(device), y.to(device)
+        pred = model(x)
+        correct += (pred.argmax(dim=1) == y).sum().item()
+        total += y.size(0)
+
+print(f"\n测试集准确率: {correct}/{total} = {100 * correct / total:.2f}%")
+# 预期：3 个 epoch 就能到 96% 左右——这就是深度学习的威力
+```
+</details>
+
+---
+
+### 练习三：过拟合 vs. 泛化实验（15 分钟）
+
+**任务**：故意制造过拟合，然后亲眼看到正则化（Dropout + 权重衰减）能缓解。
+
+在练习二的基础上，做一个小实验：
+
+1. **不用 Dropout**，训练 10 个 epoch，记录训练集和测试集的准确率——你会发现训练集准确率很高（接近 100%），但测试集远低于训练集。这就是过拟合。
+2. **加上 Dropout(0.3)**，同样训练 10 个 epoch——测试集准确率应该更高，且跟训练集的差距更小。
+
+```python
+# 实验记录模板
+print(f"{'配置':<20} {'训练准确率':<12} {'测试准确率':<12} {'差距':<10}")
+print("-" * 54)
+
+for name, use_dropout, use_weight_decay in [
+    ("无正则化", False, False),
+    ("只用Dropout", True, False),
+    ("Dropout+权重衰减", True, True),
+]:
+    # 搭模型、训练、评估...
+    # print(f"{name:<20} {train_acc:<12.2%} {test_acc:<12.2%} {train_acc - test_acc:<10.2%}")
+```
+
+---
+
+## 一条完整的训练脚本骨架
+
+以后你自己写训练代码时，直接套这个骨架：
+
+```python
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
+# ===== 1. 超参数 =====
+config = {
+    "lr": 0.001, "batch_size": 64, "epochs": 10,
+    "patience": 3,  # 早停：连续 3 轮不改善就停止
+}
+
+# ===== 2. 数据 =====
+train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
+
+# ===== 3. 模型、损失、优化器 =====
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = YourModel().to(device)
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=config["lr"])
+
+# ===== 4. 训练循环（带早停） =====
+best_val_loss = float("inf")
+patience_counter = 0
+
+for epoch in range(config["epochs"]):
+    # --- 训练 ---
+    model.train()
+    train_loss = 0.0
+    for x, y in train_loader:
+        x, y = x.to(device), y.to(device)
+        optimizer.zero_grad()
+        loss = loss_fn(model(x), y)
+        loss.backward()
+        optimizer.step()
+        train_loss += loss.item()
+
+    # --- 验证 ---
+    model.eval()
+    val_loss = 0.0
+    with torch.no_grad():
+        for x, y in val_loader:
+            x, y = x.to(device), y.to(device)
+            val_loss += loss_fn(model(x), y).item()
+
+    train_loss /= len(train_loader)
+    val_loss /= len(val_loader)
+    print(f"Epoch {epoch+1}: train_loss={train_loss:.4f}, val_loss={val_loss:.4f}")
+
+    # --- 早停检查 ---
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        patience_counter = 0
+        torch.save(model.state_dict(), "best_model.pt")  # 保存最好的
+    else:
+        patience_counter += 1
+        if patience_counter >= config["patience"]:
+            print(f"早停！第 {epoch+1} 轮停止")
+            break
+
+# ===== 5. 加载最佳模型做最终评估 =====
+model.load_state_dict(torch.load("best_model.pt"))
+# ... 在测试集上评估
+```
+
+---
+
 ## 学完能做什么 & 下一步
 
 学会这套东西，你已经摸到了现代 AI 的大门把手。具体能做的事比如：

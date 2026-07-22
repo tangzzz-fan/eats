@@ -241,6 +241,450 @@ print(train, test)     # [10, 12, 11, 13, 15] [14, 16]
 
 ---
 
+## NumPy 最佳实践清单
+
+在你继续深入之前，花 5 分钟记住下面这 10 条——它们是我（和无数前辈）用 bug 堆出来的经验。
+
+### 数据创建
+
+```python
+import numpy as np
+
+# ✅ 好：创建时直接指定 dtype，避免后续类型转换
+scores = np.array([85, 90, 88], dtype=np.float32)
+
+# ❌ 坏：不指定 dtype，全是 Python int 或 object
+scores = np.array([85, 90, 88])
+
+# ✅ 好：用 np.linspace 创建等间距数列
+x = np.linspace(0, 1, 100)  # 0 到 1 之间均匀取 100 个点
+
+# ❌ 坏：手写等差数列
+x = np.array([i * 0.01 for i in range(100)])  # 慢、不精确、有浮点累积误差
+
+# ✅ 好：np.zeros / np.ones 预分配数组
+result = np.zeros((100, 3))  # 先挖好坑，后面往里填数
+
+# ❌ 坏：用 list append 再转 array（每次 append 都重新分配内存）
+result = []
+for i in range(100):
+    result.append([0, 0, 0])
+result = np.array(result)  # 慢，且浪费内存
+```
+
+### 索引与切片
+
+```python
+arr = np.array([[1, 2, 3, 4],
+                [5, 6, 7, 8],
+                [9, 10, 11, 12]])
+
+# ✅ 好：用列表一次取多行多列
+print(arr[[0, 2]])          # 取第 0 行和第 2 行
+print(arr[:, [1, 3]])       # 取第 1 列和第 3 列
+
+# ✅ 好：布尔索引过滤
+print(arr[arr > 5])         # 所有大于 5 的元素：[6 7 8 9 10 11 12]
+
+# ⚠️ 注意：切片是"视图"，改了会影响原数组！
+view = arr[:2, :2]
+view[0, 0] = 999
+print(arr[0, 0])  # 999！原数组被改了
+
+# ✅ 如果想独立拷贝，用 .copy()
+safe = arr[:2, :2].copy()
+safe[0, 0] = 0
+print(arr[0, 0])  # 还是 999，不受影响
+```
+
+### 形状操作
+
+```python
+arr = np.arange(12)  # [0 1 2 ... 11]
+
+# reshape：改形状但总元素数不能变
+print(arr.reshape(3, 4))   # 3 行 4 列
+print(arr.reshape(2, 2, 3))  # 2 块 × 2 行 × 3 列
+
+# 用 -1 让 NumPy 自动推算这一维的大小
+print(arr.reshape(3, -1))  # 等价于 reshape(3, 4)，因为 12/3=4
+
+# flatten vs ravel：都"拍平"成一维
+# flatten() 始终返回副本；ravel() 尽量返回视图（更快）
+flat = arr.reshape(3, 4).flatten()  # 安全，不牵动原数组
+```
+
+### 性能三连
+
+```python
+# 1. 永远避免 Python 级别的 for 循环处理数组元素
+# ❌ 坏：
+result = []
+for x in np.arange(1_000_000):
+    result.append(x ** 2)
+# ✅ 好：
+result = np.arange(1_000_000) ** 2
+
+# 2. 用 @ 或 np.dot 做矩阵乘法，不要手写三重循环
+A = np.random.rand(100, 100)
+B = np.random.rand(100, 100)
+C = A @ B  # 底层调 BLAS 库，比 Python 循环快 1000 倍
+
+# 3. 能用 numpy 内置函数的别自己写
+# ❌ 坏：
+total = sum(arr)  # Python sum，慢
+# ✅ 好：
+total = np.sum(arr)  # NumPy sum，快
+# 同样的：max→np.max, min→np.min, any→np.any, all→np.all
+```
+
+---
+
+## 实战练习：从看懂到会做
+
+下面三组练习按难度递进，每一组都配了参考答案。**强烈建议你亲自动手敲代码**——只看不写，这篇文章的收获打三折。
+
+---
+
+### 练习一：广播热身（10 分钟）
+
+**任务**：给你一个 4×3 的矩阵（4 行数据，每行 3 个特征），现在要做**标准化**（Standardization）：对每一列，每个数减去该列的均值，再除以该列的标准差。
+
+标准化公式：`新值 = (原值 - 该列均值) / 该列标准差`
+
+要求只用向量化操作（不能用 for 循环），看看你能不能用广播一行搞定。
+
+**提示**：矩阵是 `(4, 3)`，均值是 `(3,)`——广播会怎么对齐？从右往左推演。
+
+<details>
+<summary>点击查看答案</summary>
+
+```python
+import numpy as np
+
+# 造数据：4 个样本，每个样本 3 个特征
+X = np.array([[1, 2, 3],
+              [4, 5, 6],
+              [7, 8, 9],
+              [10, 11, 12]], dtype=np.float64)
+
+# 一行搞定标准化：列均值是 shape (3,)，列标准差也是 (3,)
+# X 是 (4, 3)，广播规则：从右往左，(3,) 匹配 (3,)，OK
+X_norm = (X - X.mean(axis=0)) / X.std(axis=0)
+
+print("原始：")
+print(X)
+print("\n标准化后（每列均值约 0，标准差约 1）：")
+print(X_norm)
+print(f"\n每列均值: {X_norm.mean(axis=0)}")  # 应该都接近 0
+print(f"每列标准差: {X_norm.std(axis=0)}")    # 应该都接近 1
+```
+</details>
+
+---
+
+### 练习二：从零实现 K-Means（20 分钟）
+
+**任务**：写一个完整的 K-Means 函数，输入是二维数据点（比如 `(x, y)` 坐标），输出每个点属于哪个簇。
+
+要求：
+1. 随机选 K 个数据点作为初始中心（而不是全随机在空间里撒，这样更稳定）
+2. 循环直到中心不再变化（或变化小于阈值 `tol`）
+3. 返回最终的标签和中心坐标
+
+**脚手架**：
+
+```python
+import numpy as np
+
+def kmeans(X, k, max_iters=100, tol=1e-4):
+    """
+    X: 形状 (n_samples, n_features) 的数据
+    k: 簇的数量
+    max_iters: 最多迭代次数
+    tol: 中心移动小于此值即认为收敛
+    返回: (labels, centers)
+    """
+    n = X.shape[0]
+
+    # TODO 1: 随机选 k 个不重复的索引，用它对应的 X 做初始中心
+    # 提示: np.random.choice(n, k, replace=False)
+
+    # TODO 2: 写循环
+    for iteration in range(max_iters):
+        # 2a: 算每个点到每个中心的距离（用广播！）
+        # 提示: 形状要想好——点 (n, 2)，中心 (k, 2)，距离矩阵该是 (n, k)
+        # 怎么做？给点加一层 → (n, 1, 2)，广播相减得 (n, k, 2)，再平方求和开方
+
+        # 2b: 每个点归入最近的中心
+        # 提示: .argmin(axis=1)
+
+        # 2c: 更新中心
+        # 提示: np.array([X[labels == i].mean(axis=0) for i in range(k)])
+
+        # 2d: 检查中心移动是否小于 tol，是的话 break
+
+    # 最后再跑一次分类（用最终中心），返回 labels 和 centers
+    pass  # 替换为你的代码
+
+
+# 测试数据：肉眼可辨的三堆点
+np.random.seed(42)
+c1 = np.random.randn(30, 2) * 0.5 + [2, 2]    # 围绕 (2,2) 的 30 个点
+c2 = np.random.randn(30, 2) * 0.5 + [-2, -2]   # 围绕 (-2,-2) 的 30 个点
+c3 = np.random.randn(30, 2) * 0.5 + [2, -2]    # 围绕 (2,-2) 的 30 个点
+X = np.vstack([c1, c2, c3])
+np.random.shuffle(X)  # 打乱顺序
+
+labels, centers = kmeans(X, k=3)
+print("最终中心：")
+print(centers)
+print(f"每簇点数：{[sum(labels == i) for i in range(3)]}")
+```
+
+<details>
+<summary>点击查看完整答案</summary>
+
+```python
+import numpy as np
+
+def kmeans(X, k, max_iters=100, tol=1e-4):
+    n = X.shape[0]
+
+    # 1. 随机选 k 个不重复的数据点作为初始中心
+    idx = np.random.choice(n, k, replace=False)
+    centers = X[idx].astype(np.float64)
+
+    for iteration in range(max_iters):
+        # 2a. 算距离矩阵 (n, k)：每个点到每个中心的欧氏距离
+        # X: (n, 2) → 加轴 → (n, 1, 2)
+        # centers: (k, 2)
+        # diff: 广播 → (n, k, 2)
+        diffs = X[:, np.newaxis, :] - centers[np.newaxis, :, :]
+        distances = np.sqrt((diffs ** 2).sum(axis=2))
+
+        # 2b. 每个点归入最近的中心
+        labels = distances.argmin(axis=1)
+
+        # 2c. 更新中心
+        new_centers = np.array([X[labels == i].mean(axis=0) for i in range(k)])
+
+        # 2d. 检查收敛
+        shift = np.sqrt(((new_centers - centers) ** 2).sum())
+        if shift < tol:
+            print(f"第 {iteration + 1} 轮收敛，中心移动 = {shift:.6f}")
+            break
+
+        centers = new_centers
+
+    # 最终分配
+    diffs = X[:, np.newaxis, :] - centers[np.newaxis, :, :]
+    distances = np.sqrt((diffs ** 2).sum(axis=2))
+    labels = distances.argmin(axis=1)
+
+    return labels, centers
+
+
+# 测试
+np.random.seed(42)
+c1 = np.random.randn(30, 2) * 0.5 + [2, 2]
+c2 = np.random.randn(30, 2) * 0.5 + [-2, -2]
+c3 = np.random.randn(30, 2) * 0.5 + [2, -2]
+X = np.vstack([c1, c2, c3])
+np.random.shuffle(X)
+
+labels, centers = kmeans(X, k=3)
+print("最终中心：")
+print(centers)
+# 应该看到三个中心大约在 (2, 2)、(-2, -2)、(2, -2) 附近
+print(f"每簇点数：{[sum(labels == i) for i in range(3)]}")
+
+# 加分：如果装了 matplotlib，画出来看看
+try:
+    import matplotlib.pyplot as plt
+    colors = ['red', 'blue', 'green']
+    for i in range(3):
+        plt.scatter(X[labels == i, 0], X[labels == i, 1],
+                    c=colors[i], alpha=0.6, label=f'簇 {i}')
+    plt.scatter(centers[:, 0], centers[:, 1],
+                c='black', marker='x', s=200, linewidths=3, label='中心')
+    plt.legend()
+    plt.title(f'K-Means (K=3)')
+    plt.axis('equal')
+    plt.savefig('/tmp/kmeans_demo.png', dpi=150)
+    print("图表已保存到 /tmp/kmeans_demo.png")
+except ImportError:
+    print("(安装 matplotlib 可看到聚类可视化图)")
+```
+</details>
+
+---
+
+### 练习三：迷你推荐系统（30 分钟）
+
+**任务**：用本文学到的"向量 + 距离"思想，做一个极简的电影推荐系统。
+
+**数据**：5 个用户各给 5 部电影打了分（1-5 分），你需要：
+
+1. 把每个用户表示成一个 5 维向量（他对 5 部电影的评分）
+2. 给定一个新用户（只评了 3 部），用"余弦相似度"找最相似的老用户
+3. 用相似用户的评分来预测新用户对没评过的电影的评分
+
+**脚手架**：
+
+```python
+import numpy as np
+
+# 5 部电影：让子弹飞, 千与千寻, 星际穿越, 泰坦尼克号, 功夫
+movies = ["让子弹飞", "千与千寻", "星际穿越", "泰坦尼克号", "功夫"]
+
+# 5 个老用户的评分（1-5 分，0 表示没看过/没评）
+ratings = np.array([
+    [5, 3, 4, 2, 5],   # 用户 0：喜欢动作和科幻
+    [1, 5, 2, 4, 1],   # 用户 1：喜欢动画和爱情
+    [4, 1, 5, 1, 3],   # 用户 2：喜欢科幻
+    [3, 4, 3, 5, 2],   # 用户 3：喜欢爱情
+    [5, 2, 4, 3, 4],   # 用户 4：口味均衡偏动作
+], dtype=np.float64)
+
+# 新用户：只看过 3 部（让子弹飞=4, 千与千寻=1, 星际穿越=5）
+# 其他两部还没看（用 np.nan 表示）
+new_user = np.array([4, 1, 5, np.nan, np.nan], dtype=np.float64)
+
+
+def cosine_similarity(a, b):
+    """
+    余弦相似度：两个向量夹角的余弦值
+    cos(θ) = (a·b) / (|a| × |b|)
+    返回值在 [-1, 1] 之间，1 表示完全相同，-1 表示完全相反
+    注意：只比较两个用户都评过分的电影（标记为有效维）
+    """
+    # TODO: 找出 a 和 b 都有评分的维度
+    # 提示: np.isfinite() 检查是否为有效数字（不是 nan 也不是 inf）
+
+    # TODO: 只在这些有效维度上计算余弦相似度
+
+    pass
+
+
+# 第一步：找到和新用户最像的老用户
+# TODO: 对每个老用户计算余弦相似度
+
+# 第二步：用最相似用户的评分 + 相似度加权平均，预测新用户没看过的两部
+# TODO: 加权平均预测
+
+print("最相似用户索引：")
+print(f"预测新用户对 {movies[3]} 的评价：")
+print(f"预测新用户对 {movies[4]} 的评价：")
+```
+
+<details>
+<summary>点击查看完整答案</summary>
+
+```python
+import numpy as np
+
+movies = ["让子弹飞", "千与千寻", "星际穿越", "泰坦尼克号", "功夫"]
+
+ratings = np.array([
+    [5, 3, 4, 2, 5],
+    [1, 5, 2, 4, 1],
+    [4, 1, 5, 1, 3],
+    [3, 4, 3, 5, 2],
+    [5, 2, 4, 3, 4],
+], dtype=np.float64)
+
+new_user = np.array([4, 1, 5, np.nan, np.nan], dtype=np.float64)
+
+
+def cosine_similarity(a, b):
+    # 找出两个用户都评过分的维度（都不是 nan 且都 > 0）
+    mask = np.isfinite(a) & np.isfinite(b)
+    if mask.sum() == 0:
+        return 0.0
+    a_valid, b_valid = a[mask], b[mask]
+    dot = np.dot(a_valid, b_valid)
+    norm_a = np.sqrt(np.dot(a_valid, a_valid))
+    norm_b = np.sqrt(np.dot(b_valid, b_valid))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+# 第一步：找最相似的用户
+similarities = np.array([cosine_similarity(new_user, ratings[i]) for i in range(5)])
+most_similar = np.argmax(similarities)
+print(f"各用户相似度: {similarities}")
+print(f"最相似用户: {most_similar}, 相似度: {similarities[most_similar]:.3f}")
+
+# 第二步：预测新用户没看过的电影
+for movie_idx in [3, 4]:  # 泰坦尼克号, 功夫
+    # 找出所有评过这部电影的用户（且相似度 > 0）
+    valid_users = [i for i in range(5) if ratings[i, movie_idx] > 0]
+    if not valid_users:
+        print(f"{movies[movie_idx]}: 无可用预测")
+        continue
+
+    # 用相似度做加权平均
+    weighted_sum = sum(similarities[i] * ratings[i, movie_idx] for i in valid_users)
+    weight_sum = sum(abs(similarities[i]) for i in valid_users)
+    prediction = weighted_sum / weight_sum if weight_sum > 0 else 0
+    print(f"预测新用户对《{movies[movie_idx]}》的评分: {prediction:.2f}")
+
+# 预期：最相似用户可能是用户 2（也喜欢科幻），
+# 预测泰坦尼克号不会太高（1-2 分），功夫大概 3-4 分
+```
+</details>
+
+---
+
+## 调试技巧：出 bug 时按这个顺序排查
+
+当 NumPy 代码跑不通或者结果不对时，按下面这个顺序排查，效率最高：
+
+```
+第 1 步：print(X.shape)   ← 形状是你的身份证，八成错误是形状不对
+第 2 步：print(X.dtype)   ← 是 float64 还是 int64？int 做除法会截断！
+第 3 步：print(np.isnan(X).sum())   ← 有没有 nan（Not a Number）？
+第 4 步：print(X.min(), X.max())    ← 数值范围合理吗？
+```
+
+**经典 bug 速查表**：
+
+| 症状 | 最可能的原因 | 怎么修 |
+|------|-------------|--------|
+| 结果全是整数，没有小数 | dtype 是 int，除法被截断 | `arr = arr.astype(np.float64)` |
+| `ValueError: operands could not be broadcast together` | 两个数组的形状不兼容 | 打印各自 `.shape`，按"从右往左"规则对齐，缺的用 `np.newaxis` 补 |
+| 程序很慢（几秒以上） | 用了 Python for 循环而非向量化 | 用广播或 `np.apply_along_axis` 替代 |
+| 结果和预期差很大，但没报错 | 广播配对方向反了 | 在纸上画出最终想要的形状，确认每一维的来源 |
+| `nan` 出现在不该出现的地方 | 除以 0 或 0/0 | `np.where(denom != 0, num / denom, 0)` |
+| K-Means 结果每次跑都不一样 | 正常现象（初始中心随机），但差异很大说明 K 不合适 | 用"肘部法则"选 K（见下文补充知识） |
+
+---
+
+## 补充知识：怎么选 K？
+
+K-Means 里 K 选几？有个通用的偷懒方法叫**肘部法则**（Elbow Method）：
+
+对每个 K（比如 1 到 10），跑一次 K-Means，算所有点到各自中心的距离平方和（叫 Inertia 或 SSE），画出来——曲线会在某个 K 值突然"拐弯"变平缓，那就是合适的 K。
+
+```python
+def elbow_method(X, max_k=10):
+    sse = []
+    for k in range(1, max_k + 1):
+        labels, centers = kmeans(X, k)
+        # SSE = 每个点到其所属中心的距离平方总和
+        sse.append(sum(np.sum((X[labels == i] - centers[i]) ** 2)
+                       for i in range(k)))
+    return sse
+
+# sse = elbow_method(X, max_k=10)
+# plt.plot(range(1, 11), sse, marker='o')
+# "肘部"出现的地方就是合理的 K
+```
+
+---
+
 ## 学完能做什么 & 下一步
 
 这套基础不是纸上谈兵，它直接撑着这些真实应用：
